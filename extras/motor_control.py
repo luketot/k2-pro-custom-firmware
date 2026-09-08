@@ -39,12 +39,12 @@ K2_PIN_LAYOUT = {
     "motor_y_dir": ("!PB7", 0),
     "motor_y_step": ("PB8", 0),
     "motor_y_stall": ("PB12", None),
-    "motor_z_dir": ("PB5", 0),
-    "motor_z_step": ("PB6", 1),
-    "motor_z_stall": ("PB13", None),
-    "motor_z1_dir": ("PA1", 1),
-    "motor_z1_step": ("PB15", 1),
-    "motor_z1_stall": ("PA10", None),
+    #"motor_z_dir": ("PB5", 0),
+    #"motor_z_step": ("PB6", 1),
+    #"motor_z_stall": ("PB13", None),
+    #"motor_z1_dir": ("PA1", 1),
+    #"motor_z1_step": ("PB15", 1),
+    #"motor_z1_stall": ("PA10", None),
     "motor_e_stall": ("nozzle_mcu:PB12", None),
 }
 
@@ -55,10 +55,10 @@ OUTPUT_PIN_OPTIONS = (
     "motor_x_step",
     "motor_y_dir",
     "motor_y_step",
-    "motor_z_dir",
-    "motor_z_step",
-    "motor_z1_dir",
-    "motor_z1_step",
+    #"motor_z_dir",
+    #"motor_z_step",
+    #"motor_z1_dir",
+    #"motor_z1_step",
 )
 
 
@@ -751,10 +751,10 @@ PIN_DIR_SEQUENCE = (
     ("motor_x_step", 0),
     ("motor_y_dir", 0),
     ("motor_y_step", 0),
-    ("motor_z_dir", 0),
-    ("motor_z_step", 1),
-    ("motor_z1_dir", 1),
-    ("motor_z1_step", 1),
+    #("motor_z_dir", 0),
+    #("motor_z_step", 1),
+    #("motor_z1_dir", 1),
+    #("motor_z1_step", 1),
 )
 
 PIN_NORMAL_SEQUENCE = (
@@ -762,10 +762,10 @@ PIN_NORMAL_SEQUENCE = (
     ("motor_x_step", 0),
     ("motor_y_dir", 1),
     ("motor_y_step", 0),
-    ("motor_z_dir", 0),
-    ("motor_z_step", 0),
-    ("motor_z1_dir", 0),
-    ("motor_z1_step", 0),
+    #("motor_z_dir", 0),
+    #("motor_z_step", 0),
+    #("motor_z1_dir", 0),
+    #("motor_z1_step", 0),
 )
 
 
@@ -1735,16 +1735,14 @@ class Serial485TransportAdapter:
 
 
 
-KINEMATIC_AXES = ("x", "y", "z", "z1")
+KINEMATIC_AXES = ("x", "y")
 EXTRUDER_AXIS = "e"
 ALL_AXES = KINEMATIC_AXES + (EXTRUDER_AXIS,)
 EXTRUDER_AXES = (EXTRUDER_AXIS,)
 AXIS_NUM_MAP = {
     1: "x",
     2: "y",
-    3: "z",
-    4: "z1",
-    5: EXTRUDER_AXIS,
+    3: EXTRUDER_AXIS,
 }
 AXIS_TO_NUM_MAP = {axis: num for num, axis in AXIS_NUM_MAP.items()}
 STARTUP_PROBE_ADDRS = tuple(0x80 + i for i in range(1, 5))
@@ -2091,8 +2089,8 @@ state changes to the motor-control runtime.
 STALL_AXIS_PINS = (
     ("x", "motor_x_stall"),
     ("y", "motor_y_stall"),
-    ("z", "motor_z_stall"),
-    ("z1", "motor_z1_stall"),
+    #("z", "motor_z_stall"),
+    #("z1", "motor_z1_stall"),
     (EXTRUDER_AXIS, "motor_e_stall"),
 )
 
@@ -2607,8 +2605,8 @@ STARTUP_STEP_FUNCTIONS = {
 STARTUP_SERIAL_AXIS_BY_ADDR = {
     0x81: "X",
     0x82: "Y",
-    0x83: "Z",
-    0x84: "Z1",
+    #0x83: "Z",
+    #0x84: "Z1",
 }
 STARTUP_PROTOCOL_ERROR_RE = re.compile(
     r"^(no response|empty response) for addr=0x([0-9a-fA-F]{2}) "
@@ -2793,7 +2791,7 @@ class MotorControl(MotorControlDebugSurfaceMixin):
     def _calibration_usage_examples(self) -> tuple[str, ...]:
         return (
             "MOTOR_CALIBRATE AXIS=X",
-            "MOTOR_CALIBRATE AXIS=XYZZ1",
+            "MOTOR_CALIBRATE AXIS=XY",
             "MOTOR_CALIBRATE AXIS=E STAGE=encoder",
             "MOTOR_CALIBRATE AXIS=E STAGE=1",
             "MOTOR_CALIBRATE AXIS=E STAGE=offset",
