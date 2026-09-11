@@ -1920,6 +1920,9 @@ class Box:
                    CLEAN_MINIMUM_CRUISE_RATIO, CLEAN_LIMIT_SCV))
             self.gcode.run_script_from_command(
                 "G0 X%g Y%g F%.0f" % (
+                    self.wastebin_x+10, self.wastebin_y, self.travel_velocity))
+            self.gcode.run_script_from_command(
+                "G0 X%g Y%g F%.0f" % (
                     self.wastebin_x, self.wastebin_y, self.travel_velocity))
         finally:
             restore_motion_limits(
