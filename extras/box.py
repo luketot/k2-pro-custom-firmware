@@ -2060,7 +2060,7 @@ class Box:
                    CLEAN_MINIMUM_CRUISE_RATIO, CLEAN_LIMIT_SCV))
             wastebin = "X%g Y%g" % (self.wastebin_x, self.wastebin_y)
             for move in (
-                    wastebin, "Y350", "X300", "Y50", "X50", wastebin):
+                    wastebin, "Y300", "X250", "Y50", "X50", wastebin):
                 self.gcode.run_script_from_command(
                     "G0 %s F%.0f" % (move, self.travel_velocity))
             toolhead.wait_moves()
