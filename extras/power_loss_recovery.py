@@ -892,6 +892,7 @@ class PowerLossRecovery:
             "nozzle_standby", 140.0, minval=0.0)
 
         self.v_sd = self.toolhead = self.gcode_move = self.print_stats = None
+        self.motion_queuing = None
         self.z_align = None
         self.motion_mcus = ()
         self.proxy = None
@@ -946,6 +947,7 @@ class PowerLossRecovery:
                 raise RuntimeError(self.store.status()["last_error"])
             self.v_sd = self.printer.lookup_object("virtual_sdcard")
             self.toolhead = self.printer.lookup_object("toolhead")
+            self.motion_queuing = self.printer.lookup_object("motion_queuing")
             self.gcode_move = self.printer.lookup_object("gcode_move")
             self.print_stats = self.printer.lookup_object("print_stats")
             z_align = self.printer.lookup_object("z_align", None)
@@ -1235,12 +1237,12 @@ class PowerLossRecovery:
 
     def _attach_watermark(self, candidate):
         move = self.toolhead.lookahead.get_last()
-        delay = float(self.toolhead.kin_flush_delay)
+        delay = float(self.motion_queuing.get_kin_flush_delay())
         if move is None:
             candidate["target"] = float(self.toolhead.print_time)
             candidate["flush_target"] = min(
                 candidate["target"] + delay,
-                float(self.toolhead.need_flush_time))
+                float(self.motion_queuing.need_flush_time))
             return
 
         def scheduled(end_time, candidate=candidate, delay=delay):
@@ -1305,7 +1307,7 @@ class PowerLossRecovery:
         flush_target = candidate.get("flush_target")
         if target is None or flush_target is None:
             return False
-        if self.toolhead.last_flush_time < flush_target:
+        if self.motion_queuing.last_flush_time < flush_target:
             return False
         if "flushed_at" not in candidate:
             candidate["flushed_at"] = float(eventtime)
@@ -1403,7 +1405,7 @@ class PowerLossRecovery:
             "total_layer": self.print_stats.info_total_layer,
         }
         dynamic["current_layer"] = self.print_stats.info_current_layer
-        dynamic["tool_mapping"] = engine.mapping_status()
+        dynamic["tool_mapping"] = engine.mapping_checkpoint()
         return {
             "dynamic": dynamic,
             "static": static,
@@ -1607,6 +1609,11 @@ class PowerLossRecovery:
         loaded = False
         try:
             path = self._validate_snapshot(snapshot)
+            box = self.printer.lookup_object("box", None)
+            if box is not None:
+                # The recovered job keeps its checkpoint map, not one set
+                # for the next new print.
+                box.discard_next_print_map()
             self.v_sd._reset_file()
             self.v_sd._load_file(
                 gcmd, snapshot["file"]["path"], check_subdirs=True)
