@@ -1561,19 +1561,24 @@ class Serial485TransportAdapter:
 
 
 
-KINEMATIC_AXES = ("x", "y", "z", "z1")
+KINEMATIC_AXES = ("x", "y")
 EXTRUDER_AXIS = "e"
 ALL_AXES = KINEMATIC_AXES + (EXTRUDER_AXIS,)
 EXTRUDER_AXES = (EXTRUDER_AXIS,)
 AXIS_NUM_MAP = {
     1: "x",
     2: "y",
-    3: "z",
-    4: "z1",
     5: EXTRUDER_AXIS,
 }
 AXIS_TO_NUM_MAP = {axis: num for num, axis in AXIS_NUM_MAP.items()}
-STARTUP_PROBE_ADDRS = tuple(0x80 + i for i in range(1, 5))
+# K2 Pro: only x/y (0x81-0x82) are real closed-loop servo modules on this
+# bus. Z is a conventional TMC2208 stepper configured directly in
+# printer.cfg and has no RS-485 presence at all, and there is no second
+# Z (z1) module either. K2 Plus additionally probed 0x83 (z) and 0x84
+# (z1) here; on a K2 Pro neither address has anything listening, so the
+# probe timed out with "no response for addr=0x83/0x84" and aborted the
+# whole motor_control startup sequence.
+STARTUP_PROBE_ADDRS = tuple(0x80 + i for i in range(1, 3))
 EXTRUDER_BOOTSTRAP_ADDR = 0x81
 EXTRUDER_MIN_RUNTIME_ADDR = 0x81
 EXTRUDER_MAX_RUNTIME_ADDR = 0x8F
@@ -2256,7 +2261,7 @@ class MotorControlDebugSurfaceMixin:
         try:
             if gcmd.get("NUM", None) is not None or gcmd.get("EXTRUDER", None) is not None:
                 raise RuntimeError(
-                    "Use AXIS=XYZZ1E; NUM and EXTRUDER are not supported")
+                    "Use AXIS=XYE; NUM and EXTRUDER are not supported")
             axis_raw = gcmd.get("AXIS", None)
             axes = self._parse_axis_spec(axis_raw) if axis_raw is not None else None
             raw_detail = self._gcmd_raw_detail(gcmd)
@@ -2320,8 +2325,6 @@ state changes to the motor-control runtime.
 STALL_AXIS_PINS = (
     ("x", "motor_x_stall"),
     ("y", "motor_y_stall"),
-    ("z", "motor_z_stall"),
-    ("z1", "motor_z1_stall"),
     (EXTRUDER_AXIS, "motor_e_stall"),
 )
 
@@ -2591,8 +2594,6 @@ STARTUP_STEP_FUNCTIONS = {
 STARTUP_SERIAL_AXIS_BY_ADDR = {
     0x81: "X",
     0x82: "Y",
-    0x83: "Z",
-    0x84: "Z1",
 }
 STARTUP_PROTOCOL_ERROR_RE = re.compile(
     r"^(no response|empty response) for addr=0x([0-9a-fA-F]{2}) "
@@ -2719,7 +2720,7 @@ class MotorControl(MotorControlDebugSurfaceMixin):
             ("CALIBRATE_CUT_POS", self.cmd_CALIBRATE_CUT_POS,
              "CALIBRATE_CUT_POS"),
             ("MOTOR_CALIBRATE", self.cmd_MOTOR_CALIBRATE,
-             "MOTOR_CALIBRATE AXIS=XYZZ1 [DETAIL=raw] | MOTOR_CALIBRATE AXIS=E STAGE=encoder|offset|1|2 [DETAIL=raw]"),
+             "MOTOR_CALIBRATE AXIS=XY [DETAIL=raw] | MOTOR_CALIBRATE AXIS=E STAGE=encoder|offset|1|2 [DETAIL=raw]"),
         ))
 
     def _register_debug_commands(self):
@@ -2727,7 +2728,7 @@ class MotorControl(MotorControlDebugSurfaceMixin):
             ("MOTOR_QUERY_FAULTS", self.cmd_MOTOR_QUERY_FAULTS,
              "MOTOR_QUERY_FAULTS Live query and print error/warning/status codes for all axes with elapsed time"),
             ("MOTOR_CFG_OVERRIDE_STATUS", self.cmd_MOTOR_CFG_OVERRIDE_STATUS,
-             "MOTOR_CFG_OVERRIDE_STATUS [AXIS=XYZZ1E] [DETAIL=raw] Report live cfg-backed targets and current board values"),
+             "MOTOR_CFG_OVERRIDE_STATUS [AXIS=XYE] [DETAIL=raw] Report live cfg-backed targets and current board values"),
             ("MOTOR_RETRY_STARTUP", self.cmd_MOTOR_RETRY_STARTUP,
              "MOTOR_RETRY_STARTUP Restart motor-control startup"),
         ))
@@ -2764,19 +2765,19 @@ class MotorControl(MotorControlDebugSurfaceMixin):
                 i += 1
             if axis not in AXIS_TO_NUM_MAP:
                 raise RuntimeError(
-                    f"unsupported AXIS={raw_value!r}; use X,Y,Z,Z1,E")
+                    f"unsupported AXIS={raw_value!r}; use X,Y,E")
             if axis not in axes:
                 axes.append(axis)
         return tuple(axes)
 
     @staticmethod
     def _format_axis_label(axis: str) -> str:
-        return "Z1" if axis == "z1" else axis.upper()
+        return axis.upper()
 
     def _calibration_usage_examples(self) -> tuple[str, ...]:
         return (
             "MOTOR_CALIBRATE AXIS=X",
-            "MOTOR_CALIBRATE AXIS=XYZZ1",
+            "MOTOR_CALIBRATE AXIS=XY",
             "MOTOR_CALIBRATE AXIS=E STAGE=encoder",
             "MOTOR_CALIBRATE AXIS=E STAGE=1",
             "MOTOR_CALIBRATE AXIS=E STAGE=offset",
@@ -3754,8 +3755,6 @@ class MotorControl(MotorControlDebugSurfaceMixin):
             clear_axes = ""
             if "x" in axes or "y" in axes:
                 clear_axes += "xy"
-            if "z" in axes or "z1" in axes:
-                clear_axes += "z"
             if clear_axes:
                 kin.clear_homing_state(clear_axes)
         except Exception:
@@ -4625,4 +4624,3 @@ class MotorControl(MotorControlDebugSurfaceMixin):
 
 def load_config(config):
     return MotorControl(config)
-
